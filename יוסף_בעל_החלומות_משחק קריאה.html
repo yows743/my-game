@@ -1,0 +1,1367 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>יוסף בעל החלומות – משחק קריאה</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;900&display=swap');
+
+  :root {
+    --desert-dark: #2c1810;
+    --desert-mid: #8b4513;
+    --desert-warm: #c4782a;
+    --desert-sand: #d4a843;
+    --desert-light: #e8c86a;
+    --sky-blue: #1a3a5c;
+    --sky-mid: #2d5f8a;
+    --night-blue: #0d1b2e;
+    --gold: #f5c842;
+    --star-yellow: #fff9c4;
+    --cream: #fdf6e3;
+    --correct: #4caf50;
+    --wrong: #e05c5c;
+    --pyramid: #c9a84c;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Rubik', sans-serif;
+    background: var(--desert-dark);
+    min-height: 100vh;
+    direction: rtl;
+    overflow-x: hidden;
+    color: var(--cream);
+  }
+
+  /* === DESERT / EGYPT BACKGROUND === */
+  .desert-bg {
+    position: fixed; inset: 0; z-index: 0; overflow: hidden;
+    background: linear-gradient(180deg,
+      #0d1b2e 0%,
+      #1a3a5c 35%,
+      #8b4513 65%,
+      #c4782a 85%,
+      #d4a843 100%
+    );
+  }
+  /* Stars */
+  .star {
+    position: absolute;
+    background: white;
+    border-radius: 50%;
+    animation: twinkle var(--dur, 3s) ease-in-out infinite var(--delay, 0s);
+  }
+  @keyframes twinkle { 0%,100%{opacity:0.2} 50%{opacity:1} }
+
+  /* Pyramids SVG at bottom */
+  .pyramids {
+    position: absolute; bottom: 0; width: 100%; z-index: 1;
+  }
+  /* Moon */
+  .moon {
+    position: absolute; top: 40px; left: 60px;
+    width: 50px; height: 50px;
+    background: radial-gradient(circle at 35% 35%, #fff9c4, #f0c040);
+    border-radius: 50%;
+    box-shadow: 0 0 20px rgba(255,240,100,0.6);
+    animation: moonGlow 4s ease-in-out infinite;
+  }
+  @keyframes moonGlow { 0%,100%{box-shadow:0 0 20px rgba(255,240,100,0.6)} 50%{box-shadow:0 0 40px rgba(255,240,100,0.9)} }
+
+  /* Camel silhouette */
+  .camel-wrap {
+    position: absolute; bottom: 90px; right: 3%;
+    animation: camelWalk 20s linear infinite;
+  }
+  @keyframes camelWalk { 0%{right:3%} 100%{right:110%} }
+
+  /* === SCREENS === */
+  .screen {
+    display: none; position: relative; z-index: 10;
+    min-height: 100vh; padding: 20px;
+  }
+  .screen.active { display: flex; flex-direction: column; align-items: center; }
+
+  /* === CARDS === */
+  .card {
+    background: rgba(253,246,227,0.97);
+    border-radius: 20px;
+    padding: 28px;
+    width: 100%; max-width: 700px;
+    color: var(--desert-dark);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5), 0 0 0 3px var(--desert-sand);
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 1.5rem; font-weight: 900;
+    color: var(--desert-mid);
+    margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  /* === BUTTONS === */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 28px; border-radius: 50px; border: none; cursor: pointer;
+    font-family: 'Rubik', sans-serif; font-size: 1.1rem; font-weight: 700;
+    transition: all 0.2s;
+  }
+  .btn-primary {
+    background: linear-gradient(135deg, var(--desert-mid), var(--desert-sand));
+    color: white;
+    box-shadow: 0 4px 15px rgba(139,69,19,0.5);
+  }
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(139,69,19,0.6); }
+  .btn-secondary {
+    background: var(--cream); color: var(--desert-mid);
+    border: 2px solid var(--desert-warm);
+  }
+  .btn-secondary:hover { background: var(--desert-sand); color: white; }
+  .btn-small { padding: 8px 18px; font-size: 0.9rem; }
+  .btn-back {
+    background: rgba(255,255,255,0.15); color: var(--cream);
+    border: 1px solid rgba(255,255,255,0.3); padding: 10px 20px;
+    font-size: 0.9rem; font-family: 'Rubik', sans-serif; font-weight: 500;
+    border-radius: 50px; cursor: pointer; transition: all 0.2s;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .btn-back:hover { background: rgba(255,255,255,0.25); }
+
+  /* === TITLE SCREEN === */
+  #screen-title { justify-content: center; text-align: center; }
+  .title-main {
+    font-size: 3rem; font-weight: 900;
+    color: var(--desert-light);
+    text-shadow: 0 4px 20px rgba(0,0,0,0.7), 0 0 40px rgba(212,168,67,0.4);
+    line-height: 1.1; margin-bottom: 8px;
+  }
+  .title-sub { font-size: 1.3rem; color: var(--desert-sand); margin-bottom: 32px; }
+  .title-icon {
+    font-size: 5rem; margin-bottom: 16px;
+    animation: dreamFloat 4s ease-in-out infinite;
+    filter: drop-shadow(0 0 20px rgba(255,215,0,0.5));
+  }
+  @keyframes dreamFloat { 0%,100%{transform:translateY(0) rotate(-3deg)} 50%{transform:translateY(-12px) rotate(3deg)} }
+
+  /* === MENU === */
+  .menu-grid { display: grid; grid-template-columns: 1fr; gap: 14px; width: 100%; max-width: 700px; }
+  .menu-card {
+    background: rgba(253,246,227,0.95); border-radius: 20px; padding: 20px 24px;
+    display: flex; align-items: center; gap: 16px; cursor: pointer;
+    transition: all 0.25s; border: 3px solid transparent; color: var(--desert-dark);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+  }
+  .menu-card:hover { transform: translateX(-6px); border-color: var(--desert-sand); }
+  .menu-card.completed { border-color: var(--correct); }
+  .menu-icon { font-size: 2.5rem; flex-shrink: 0; }
+  .menu-label { font-size: 1.2rem; font-weight: 700; color: var(--desert-mid); }
+  .menu-desc { font-size: 0.9rem; color: #666; margin-top: 4px; }
+  .menu-badge {
+    background: var(--desert-warm); color: white;
+    border-radius: 50px; padding: 4px 12px; font-size: 0.8rem; font-weight: 700;
+  }
+  .menu-badge.done { background: var(--correct); }
+
+  /* === PROGRESS === */
+  .progress-wrap { width: 100%; max-width: 700px; margin-bottom: 12px; }
+  .progress-label { font-size: 0.85rem; color: var(--desert-sand); margin-bottom: 6px; }
+  .progress-bar-bg { background: rgba(255,255,255,0.15); border-radius: 50px; height: 10px; }
+  .progress-bar-fill {
+    background: linear-gradient(90deg, var(--desert-warm), var(--gold));
+    height: 10px; border-radius: 50px; transition: width 0.5s ease;
+  }
+
+  /* === MEMORY === */
+  .memory-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; direction: rtl; }
+  .mem-card {
+    aspect-ratio: 1; border-radius: 12px; cursor: pointer;
+    background: var(--sky-blue); border: 3px solid var(--desert-sand);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem; font-weight: 700; color: white;
+    transition: all 0.3s; user-select: none;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3); text-align: center; padding: 6px;
+  }
+  .mem-card.flipped { background: var(--cream); color: var(--desert-dark); border-color: var(--gold); }
+  .mem-card.matched { background: #d4edda; color: var(--desert-dark); border-color: var(--correct); cursor: default; }
+  .mem-card:hover:not(.flipped):not(.matched) { transform: scale(1.05); background: var(--sky-mid); }
+
+  /* === BINGO === */
+  .bingo-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; direction: rtl; }
+  .bingo-cell {
+    aspect-ratio: 1; border-radius: 10px; cursor: pointer;
+    background: var(--cream); color: var(--desert-dark);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; text-align: center;
+    border: 2px solid var(--desert-warm); transition: all 0.2s; padding: 4px;
+  }
+  .bingo-cell:hover { background: #fef3cd; }
+  .bingo-cell.marked { background: var(--desert-sand); color: white; border-color: var(--desert-dark); }
+  .bingo-cell.bingo-win { background: var(--gold); color: var(--desert-dark); animation: pulse 0.5s; }
+  @keyframes pulse { 0%,100%{transform:scale(1)} 50%{transform:scale(1.1)} }
+  .bingo-clue {
+    background: var(--sky-blue); color: var(--star-yellow);
+    border-radius: 12px; padding: 14px 20px; font-size: 1.1rem; font-weight: 700;
+    text-align: center; margin-bottom: 14px;
+  }
+
+  /* === TEXT === */
+  .text-content {
+    font-size: 1.25rem; line-height: 2.4; direction: rtl; text-align: right;
+    color: var(--desert-dark);
+  }
+  .text-content .word {
+    display: inline; cursor: pointer; border-radius: 4px; padding: 0 2px;
+    transition: background 0.2s;
+  }
+  .text-content .word:hover { background: rgba(196,120,42,0.15); }
+  .text-content .word.current { background: var(--desert-sand); color: white; border-radius: 4px; }
+
+  /* === SPEED CONTROLS === */
+  .speed-controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+  .speed-btn {
+    padding: 8px 16px; border-radius: 50px; border: 2px solid var(--desert-warm);
+    background: transparent; color: var(--desert-dark); cursor: pointer;
+    font-family: 'Rubik', sans-serif; font-weight: 700; font-size: 0.9rem; transition: all 0.2s;
+  }
+  .speed-btn.active, .speed-btn:hover { background: var(--desert-warm); color: white; }
+
+  /* === QUESTIONS === */
+  .question-text { font-size: 1.15rem; font-weight: 700; margin-bottom: 16px; color: var(--desert-dark); }
+  .options-list { display: flex; flex-direction: column; gap: 10px; }
+  .option-btn {
+    padding: 14px 18px; border-radius: 12px; border: 2px solid #ddd;
+    background: var(--cream); color: var(--desert-dark); cursor: pointer;
+    font-family: 'Rubik', sans-serif; font-size: 1rem; font-weight: 500;
+    text-align: right; transition: all 0.2s; width: 100%;
+  }
+  .option-btn:hover { border-color: var(--desert-sand); background: #fef3cd; }
+  .option-btn.correct { border-color: var(--correct); background: #d4edda; color: #2e7d32; }
+  .option-btn.wrong { border-color: var(--wrong); background: #fdecea; color: #c62828; }
+  .feedback-box {
+    padding: 12px 16px; border-radius: 12px; font-size: 1rem; font-weight: 700;
+    text-align: center; margin-top: 12px;
+  }
+  .feedback-box.correct { background: #d4edda; color: #2e7d32; border: 2px solid var(--correct); }
+  .feedback-box.wrong { background: #fdecea; color: #c62828; border: 2px solid var(--wrong); }
+
+  /* === SORT === */
+  .fill-chip {
+    padding: 8px 18px; border-radius: 50px; background: var(--desert-mid);
+    color: white; cursor: pointer; font-family: 'Rubik', sans-serif;
+    font-size: 0.95rem; font-weight: 700; border: none; transition: all 0.2s;
+    user-select: none;
+  }
+  .fill-chip:hover { background: var(--desert-dark); transform: scale(1.05); }
+
+  /* === ORDER === */
+  .sort-container { display: flex; flex-direction: column; gap: 10px; }
+  .sort-item {
+    padding: 12px 16px; border-radius: 12px; border: 2px solid var(--desert-warm);
+    background: var(--cream); font-size: 1rem; font-weight: 500;
+    display: flex; align-items: center; gap: 10px; color: var(--desert-dark);
+    transition: all 0.2s;
+  }
+  .sort-num {
+    background: var(--desert-mid); color: white;
+    border-radius: 50%; width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem; font-weight: 700; flex-shrink: 0;
+  }
+
+  /* === WORD EXPLORE === */
+  .word-card-explore {
+    background: linear-gradient(135deg, var(--sky-blue), var(--sky-mid));
+    color: white; border-radius: 16px; padding: 20px; margin-bottom: 16px;
+  }
+  .word-big { font-size: 2.5rem; font-weight: 900; margin-bottom: 8px; }
+  .word-family { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .family-chip {
+    background: rgba(255,255,255,0.2); padding: 6px 14px; border-radius: 50px;
+    font-size: 0.95rem; font-weight: 700;
+  }
+  .my-sentence {
+    width: 100%; padding: 12px; border-radius: 10px;
+    border: 2px solid var(--desert-warm); font-family: 'Rubik', sans-serif;
+    font-size: 1rem; direction: rtl; resize: none;
+  }
+
+  /* === TIMER === */
+  .timer-display {
+    font-size: 3rem; font-weight: 900; color: var(--desert-sand);
+    text-align: center; font-variant-numeric: tabular-nums;
+  }
+  .timer-label { text-align: center; font-size: 0.9rem; color: var(--desert-warm); }
+  .timer-comparison { display: flex; gap: 20px; justify-content: center; margin-top: 12px; flex-wrap: wrap; }
+  .timer-round { text-align: center; }
+  .timer-round-num { font-size: 1.4rem; font-weight: 900; color: var(--desert-mid); }
+  .timer-round-label { font-size: 0.8rem; color: #666; }
+
+  /* === SCORE === */
+  .score-badge {
+    background: var(--sky-blue); color: var(--gold);
+    border-radius: 50px; padding: 8px 18px; font-size: 1.1rem; font-weight: 900;
+  }
+
+  /* === SCREEN HEADER === */
+  .screen-header {
+    width: 100%; max-width: 700px;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 16px; flex-wrap: wrap; gap: 10px;
+  }
+  .screen-title-h { font-size: 1.4rem; font-weight: 900; color: var(--desert-light); }
+
+  /* === ACHIEVEMENTS === */
+  .achievements { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .achievement {
+    background: rgba(253,246,227,0.95); border-radius: 14px; padding: 14px;
+    display: flex; align-items: center; gap: 10px;
+    color: var(--desert-dark); opacity: 0.4; transition: opacity 0.5s;
+  }
+  .achievement.unlocked { opacity: 1; border: 2px solid var(--gold); }
+  .achievement-icon { font-size: 2rem; }
+  .achievement-text { font-size: 0.9rem; font-weight: 700; }
+
+  /* === MODAL === */
+  .modal-overlay {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.7);
+    z-index: 500; align-items: center; justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal-box {
+    background: var(--cream); border-radius: 24px; padding: 28px;
+    max-width: 480px; width: 90%; color: var(--desert-dark); direction: rtl;
+  }
+  .modal-title { font-size: 1.3rem; font-weight: 900; margin-bottom: 12px; color: var(--desert-mid); }
+
+  /* === CONFETTI === */
+  .confetti-wrap { position: fixed; inset: 0; pointer-events: none; z-index: 1000; }
+  .confetti-piece {
+    position: absolute; width: 10px; height: 10px; border-radius: 2px;
+    animation: confetti-fall 2s ease-out forwards;
+  }
+  @keyframes confetti-fall {
+    0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+
+  /* === KW COUNTERS === */
+  #kwCounters { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+
+  /* === TAGS === */
+  .tag { display: inline-block; padding: 3px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 700; margin: 0 4px; }
+  .tag-s1 { background: rgba(255,215,0,0.25); color: var(--gold); }
+  .tag-s2 { background: rgba(255,255,255,0.15); color: #ccc; }
+  .tag-s3 { background: rgba(100,200,255,0.2); color: #90d4f7; }
+
+  @media(max-width:500px){
+    .title-main{font-size:2.2rem}
+    .memory-grid,.bingo-grid{grid-template-columns:repeat(3,1fr)}
+    .achievements{grid-template-columns:1fr}
+  }
+</style>
+</head>
+<body>
+
+<!-- Desert Background -->
+<div class="desert-bg" id="desertBg">
+  <div class="moon"></div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal-overlay" id="helpModal">
+  <div class="modal-box">
+    <div class="modal-title">❓ עזרה</div>
+    <div id="helpText" style="font-size:1rem;line-height:1.8;"></div>
+    <br>
+    <button class="btn btn-primary" onclick="closeHelp()">סגור</button>
+  </div>
+</div>
+
+<!-- ═══ TITLE ═══ -->
+<div class="screen active" id="screen-title">
+  <div class="title-icon">🌙</div>
+  <div class="title-main">יוֹסֵף בַּעַל<br>הַחֲלוֹמוֹת</div>
+  <div class="title-sub">מִשְׂחַק קְרִיאָה לְכִיתּוֹת ג׳, ד׳</div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;margin-bottom:28px;">
+    <span class="tag tag-s1">⭐ לִפְנֵי הַקְּרִיאָה</span>
+    <span class="tag tag-s2">⭐ בְּמַהֲלַךְ הַקְּרִיאָה</span>
+    <span class="tag tag-s3">⭐ אַחֲרֵי הַקְּרִיאָה</span>
+  </div>
+  <button class="btn btn-primary" style="font-size:1.3rem;padding:18px 40px;" onclick="goTo('screen-menu')">🎮 בֹּואוּ נַתְחִיל!</button>
+  <div style="margin-top:24px;color:var(--desert-sand);font-size:0.95rem;opacity:0.85;">מאת: יוחאי ווייסקופף</div>
+</div>
+
+<!-- ═══ MENU ═══ -->
+<div class="screen" id="screen-menu">
+  <div class="screen-header">
+    <div class="screen-title-h">🌙 בְּחֲרוּ פְּעִילוּת</div>
+    <div class="score-badge" id="totalScore">⭐ 0 נְקֻדּוֹת</div>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-label">הִתְקַדְּמוּת כּוֹלֶלֶת</div>
+    <div class="progress-bar-bg"><div class="progress-bar-fill" id="mainProgress" style="width:0%"></div></div>
+  </div>
+  <div class="menu-grid">
+    <div class="menu-card" onclick="goTo('screen-stage1')">
+      <div class="menu-icon">🎴</div>
+      <div class="menu-info">
+        <div class="menu-label">שַׁלְב 1 – לִפְנֵי הַקְּרִיאָה</div>
+        <div class="menu-desc">מִשְׂחַק זִכָּרוֹן • בִּינְגוֹ • סִיווּג מִלִּים</div>
+      </div>
+      <div class="menu-badge" id="badge1">חָדָשׁ</div>
+    </div>
+    <div class="menu-card" onclick="goTo('screen-stage2')">
+      <div class="menu-icon">📖</div>
+      <div class="menu-info">
+        <div class="menu-label">שַׁלְב 2 – בְּמַהֲלַךְ הַקְּרִיאָה</div>
+        <div class="menu-desc">סִימּוּן מִלּוֹת מַפְתֵּחַ • קְרִיאָה עִם תְּמִיכָה • קְרִיאָה חוֹזֶרֶת</div>
+      </div>
+      <div class="menu-badge" id="badge2">חָדָשׁ</div>
+    </div>
+    <div class="menu-card" onclick="goTo('screen-stage3')">
+      <div class="menu-icon">✅</div>
+      <div class="menu-info">
+        <div class="menu-label">שַׁלְב 3 – אַחֲרֵי הַקְּרִיאָה</div>
+        <div class="menu-desc">שְׁאֵלוֹת הֲבָנָה • סֵדֶר אֵרוּעִים • הַשְׁלָמַת מִשְׁפָּטִים • חֲקִירַת מִלָּה</div>
+      </div>
+      <div class="menu-badge" id="badge3">חָדָשׁ</div>
+    </div>
+    <div class="menu-card" onclick="goTo('screen-achievements')">
+      <div class="menu-icon">🏆</div>
+      <div class="menu-info">
+        <div class="menu-label">הִישָּׂגִים שֶׁלִּי</div>
+        <div class="menu-desc">רְאוּ אֶת כָּל הַפְּרָסִים שֶׁצְּבַרְתֶּם</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ STAGE 1 MENU ═══ -->
+<div class="screen" id="screen-stage1">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-menu')">→ תַּפְרִיט</button>
+    <div class="screen-title-h">⭐ לִפְנֵי הַקְּרִיאָה</div>
+    <button class="btn-back" onclick="showHelp('בַּשַּׁלְב הַזֶּה נַכִּיר אֶת מִלּוֹת הַסִּיפּוּר לִפְנֵי שֶׁנִּקְרָא אוֹתוֹ. נִשְׂחַק בְּמִשְׂחַק זִכָּרוֹן, בִּינְגוֹ וְסִיווּג מִלִּים.')">❓</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 בְּחֲרוּ פְּעִילוּת</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button class="btn btn-primary" onclick="startMemory()">🎴 מִשְׂחַק זִכָּרוֹן מִלִּים</button>
+      <button class="btn btn-secondary" onclick="startBingo()">🎯 בִּינְגוֹ מִלּוֹת אוֹצָר</button>
+      <button class="btn btn-secondary" onclick="startSort1()">📂 סִיווּג מִלִּים</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MEMORY ═══ -->
+<div class="screen" id="screen-memory">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage1')">→ חֲזָרָה</button>
+    <div class="screen-title-h">🎴 מִשְׂחַק זִכָּרוֹן</div>
+    <button class="btn-back" onclick="showHelp('מִצְאוּ אֶת הַזּוּגוֹת! לִחְצוּ עַל שְׁנֵי קְלָפִים וּבְדְקוּ אִם הֵם מַתְאִימִים.')">❓</button>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div class="score-badge" id="memScore">זוּגוֹת: 0/8</div>
+      <div class="score-badge" id="memMoves">מַהֲלָכִים: 0</div>
+    </div>
+    <div class="memory-grid" id="memoryGrid"></div>
+  </div>
+</div>
+
+<!-- ═══ BINGO ═══ -->
+<div class="screen" id="screen-bingo">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage1')">→ חֲזָרָה</button>
+    <div class="screen-title-h">🎯 בִּינְגוֹ</div>
+    <button class="btn-back" onclick="showHelp('קִרְאוּ אֶת הַהַגְדָּרָה וּמִצְאוּ אֶת הַמִּלָּה הַמַּתְאִימָה בַּלּוּחַ. סַמְּנוּ אוֹתָהּ! שׁוּרָה שְׁלֵמָה = בִּינְגוֹ!')">❓</button>
+  </div>
+  <div class="card">
+    <div style="background:#e8f4fd;border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:0.95rem;color:#1a3a5c;line-height:1.7;">
+      🎯 <strong>הוֹרָאוֹת:</strong> לִחְצוּ עַל "הַגְרֵל שְׁאֵלָה" – תּוֹפִיעַ הַגְדָּרָה שֶׁל מִלָּה. מִצְאוּ אֶת הַמִּלָּה הַנְּכוֹנָה בַּלּוּחַ וְלִחְצוּ עָלֶיהָ. אִם תַּשְׁלִימוּ שׁוּרָה שְׁלֵמָה – תְּנַצְּחוּ בְּבִינְגוֹ! 🏆
+    </div>
+    <div class="bingo-clue" id="bingoClue">לִחְצוּ עַל "הַגְרֵל שְׁאֵלָה" כְּדֵי לְהַתְחִיל!</div>
+    <div class="bingo-grid" id="bingoGrid"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-small" onclick="drawBingo()">🎲 הַגְרֵל שְׁאֵלָה</button>
+      <button class="btn btn-secondary btn-small" onclick="startBingo()">🔄 לוּחַ חָדָשׁ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ SORT ═══ -->
+<div class="screen" id="screen-sort1">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage1')">→ חֲזָרָה</button>
+    <div class="screen-title-h">📂 סִיווּג מִלִּים</div>
+    <button class="btn-back" onclick="showHelp('מַיְּינוּ אֶת הַמִּלִּים לִשְׁתֵּי קְבוּצוֹת. 📱 לִחְצוּ עַל מִלָּה כְּדֵי לְהַזִּיז אוֹתָהּ | 💻 אֶפְשָׁר גַּם לִגְרֹר')">❓</button>
+  </div>
+  <div class="card">
+    <div class="card-title" style="letter-spacing:0.05em;">מַיְּנוּ כָּל מִלָּה לַקְּבוּצָה הַמַּתְאִימָה:</div>
+    <div style="font-size:0.88rem;color:#666;margin-bottom:10px;">📱 לִחְצוּ עַל מִלָּה כְּדֵי לְהַזִּיז אוֹתָהּ בֵּין הַקְּבוּצוֹת &nbsp;|&nbsp; 💻 אֶפְשָׁר גַּם לִגְרֹר</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+      <div>
+        <div style="text-align:center;font-weight:900;margin-bottom:8px;color:#2d5a27;">🏃 פְּעֻלּוֹת</div>
+        <div id="zone-actions" style="min-height:120px;background:#e8f5e9;border-radius:12px;border:2px dashed #4a8c3f;padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;"></div>
+      </div>
+      <div>
+        <div style="text-align:center;font-weight:900;margin-bottom:8px;color:var(--desert-mid);">🌙 עֲצָמִים</div>
+        <div id="zone-objects" style="min-height:120px;background:#fff3e0;border-radius:12px;border:2px dashed var(--desert-warm);padding:8px;display:flex;flex-wrap:wrap;gap:6px;align-content:flex-start;"></div>
+      </div>
+    </div>
+    <div id="sort-words" style="display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:10px;background:#f5f5f5;border-radius:12px;min-height:60px;"></div>
+    <div style="margin-top:12px;text-align:center;">
+      <button class="btn btn-primary btn-small" onclick="checkSort()">✅ בִּדְקוּ</button>
+      <button class="btn btn-secondary btn-small" onclick="startSort1()">🔄 שַׂחֲקוּ שׁוּב</button>
+    </div>
+    <div id="sortFeedback" style="margin-top:10px;"></div>
+  </div>
+</div>
+
+<!-- ═══ STAGE 2 MENU ═══ -->
+<div class="screen" id="screen-stage2">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-menu')">→ תַּפְרִיט</button>
+    <div class="screen-title-h">📖 בְּמַהֲלַךְ הַקְּרִיאָה</div>
+    <button class="btn-back" onclick="showHelp('כָּאן תִּקְרְאוּ אֶת הַסִּיפּוּר בְּכַמָּה דְּרָכִים שֶׁיַּעַזְרוּ לָכֶם לִקְרֹא מַהֵר, מְדֻיָּק וְעִם הַנְגָּנָה.')">❓</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 בְּחֲרוּ פְּעִילוּת</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button class="btn btn-primary" onclick="startKeywords()">🔑 סִימּוּן מִלּוֹת מַפְתֵּחַ</button>
+      <button class="btn btn-secondary" onclick="startGuided()">▶️ קְרִיאָה עִם תְּמִיכָה</button>
+      <button class="btn btn-secondary" onclick="startRepeated()">⏱️ קְרִיאָה חוֹזֶרֶת לְשִׁיפּוּר קֶצֶב</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ KEYWORDS ═══ -->
+<div class="screen" id="screen-keywords">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage2')">→ חֲזָרָה</button>
+    <div class="screen-title-h">🔑 מִלּוֹת מַפְתֵּחַ</div>
+    <button class="btn-back" onclick="showHelp('לִחְצוּ עַל הַמִּלִּים חֲלוֹמוֹת וְיוֹסֵף בַּטֶּקְסְט וְסִפְרוּ כַּמָּה פְּעָמִים מְצָאתֶם כָּל אַחַת!')">❓</button>
+  </div>
+  <div class="card">
+    <div style="margin-bottom:6px;font-weight:700;color:var(--desert-mid);">🎯 מִצְאוּ וְסַמְּנוּ בַּטֶּקְסְט:</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:8px;">
+      <span style="background:#e8f5e9;border-radius:8px;padding:6px 14px;font-weight:900;color:#2d5a27;">חֲלוֹמוֹת / הַחֲלוֹמוֹת / חֲלוֹמוֹתָיו 💭</span>
+      <span style="background:#fff3e0;border-radius:8px;padding:6px 14px;font-weight:900;color:var(--desert-mid);">יוֹסֵף 👦</span>
+    </div>
+    <div style="font-size:0.85rem;color:#888;margin-bottom:10px;">לִחְצוּ עַל הַמִּלִּים בַּטֶּקְסְט – גַּם עִם ה׳ הַיְּדִיעָה נֶחְשָׁב! מִלִּים אֲחֵרוֹת לֹא יְסֻמְּנוּ</div>
+    <div id="kwCounters"></div>
+    <div class="text-content" id="keywordsText"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-small" onclick="checkKeywords()">✅ בִּדְקוּ אֶת הַסְּפִירָה שֶׁלָּכֶם</button>
+      <button class="btn btn-secondary btn-small" onclick="resetKeywords()">🔄 הַתְחִילוּ מֵחָדָשׁ</button>
+    </div>
+    <div id="keywordsFeedback" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- ═══ GUIDED ═══ -->
+<div class="screen" id="screen-guided">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage2')">→ חֲזָרָה</button>
+    <div class="screen-title-h">▶️ קְרִיאָה עִם תְּמִיכָה</div>
+    <button class="btn-back" onclick="showHelp('הַמִּלִּים יָאִירוּ אַחַת אַחַת. קִרְאוּ בְּקוֹל כְּשֶׁהַמִּלָּה מֻדְגֶּשֶׁת. תּוּכְלוּ לְשַׁנּוֹת אֶת הַמַּהִירוּת.')">❓</button>
+  </div>
+  <div class="card">
+    <div style="background:#e8f4fd;border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:0.95rem;color:#1a3a5c;line-height:1.7;">
+      📖 <strong>הוֹרָאוֹת:</strong> לִחְצוּ עַל "הַתְחִילוּ" – כָּל מִלָּה תָּאִיר בְּתוֹרָהּ. קִרְאוּ בְּקוֹל אֶת הַמִּלָּה הַמֻּדְגֶּשֶׁת. תּוּכְלוּ לִבְחֹר מַהִירוּת קְרִיאָה לְפִי הַצֹּרֶךְ.
+    </div>
+    <div class="speed-controls">
+      <span style="font-weight:700;color:var(--desert-mid);">מַהִירוּת:</span>
+      <button class="speed-btn active" id="spd-slow" onclick="setSpeed(2000,'slow')">🐢 אִיטִי</button>
+      <button class="speed-btn" id="spd-normal" onclick="setSpeed(1000,'normal')">🚶 רָגִיל</button>
+      <button class="speed-btn" id="spd-fast" onclick="setSpeed(500,'fast')">🏃 מָהִיר</button>
+    </div>
+    <div class="text-content" id="guidedText"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <button class="btn btn-primary btn-small" onclick="playGuided()">▶️ הַתְחִילוּ</button>
+      <button class="btn btn-secondary btn-small" onclick="pauseGuided()">⏸️ עִצְרוּ</button>
+      <button class="btn btn-secondary btn-small" onclick="resetGuided()">🔄 מֵחָדָשׁ</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ REPEATED ═══ -->
+<div class="screen" id="screen-repeated">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage2')">→ חֲזָרָה</button>
+    <div class="screen-title-h">⏱️ קְרִיאָה חוֹזֶרֶת</div>
+    <button class="btn-back" onclick="showHelp('קִרְאוּ אֶת הַסִּיפּוּר וּמִדְדוּ אֶת הַזְּמַן. נַסּוּ שׁוּב וְהִשְׁתַּפְּרוּ בְּכָל סַבְב!')">❓</button>
+  </div>
+  <div class="card">
+    <div style="background:#e8f4fd;border-radius:12px;padding:12px 16px;margin-bottom:14px;font-size:0.95rem;color:#1a3a5c;line-height:1.7;">
+      ⏱️ <strong>הוֹרָאוֹת:</strong> קִרְאוּ אֶת הַסִּיפּוּר בְּקוֹל שָׁלֹשׁ פְּעָמִים וּמִדְדוּ אֶת הַזְּמַן בְּכָל סַבְב. נַסּוּ לְהִשְׁתַּפֵּר וְלִקְרֹא מַהֵר יוֹתֵר בְּכָל פַּעַם!
+    </div>
+    <div id="repeatRoundInfo" style="text-align:center;font-weight:700;font-size:1.1rem;margin-bottom:10px;color:var(--desert-mid);">סַבְב 1 מִתּוֹךְ 3</div>
+    <div class="timer-display" id="timerDisplay">00:00</div>
+    <div class="timer-label">שְׁנִיּוֹת קְרִיאָה</div>
+    <div class="timer-comparison" id="timerComparison"></div>
+    <div style="margin:14px 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-small" onclick="startTimer()">▶️ הַתְחִילוּ קְרִיאָה</button>
+      <button class="btn btn-secondary btn-small" onclick="stopTimer()">⏹️ סִיַּמְתִּי לִקְרֹא</button>
+    </div>
+    <div class="text-content" id="repeatedText" style="font-size:1.1rem;"></div>
+  </div>
+</div>
+
+<!-- ═══ STAGE 3 MENU ═══ -->
+<div class="screen" id="screen-stage3">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-menu')">→ תַּפְרִיט</button>
+    <div class="screen-title-h">✅ אַחֲרֵי הַקְּרִיאָה</div>
+    <button class="btn-back" onclick="showHelp('כָּאן נִבְדֹּק שֶׁהֲבַנְתֶּם אֶת הַסִּיפּוּר וְנִלְמַד מִלִּים חֲדָשׁוֹת.')">❓</button>
+  </div>
+  <div class="card">
+    <div class="card-title">🎯 בְּחֲרוּ פְּעִילוּת</div>
+    <div style="display:flex;flex-direction:column;gap:12px;">
+      <button class="btn btn-primary" onclick="startQuestions()">❓ שְׁאֵלוֹת הֲבָנָה</button>
+      <button class="btn btn-secondary" onclick="startOrderEvents()">📋 סֵדֶר אֵרוּעִים</button>
+      <button class="btn btn-secondary" onclick="startFillBlanks()">✏️ הַשְׁלָמַת מִשְׁפָּטִים</button>
+      <button class="btn btn-secondary" onclick="startWordExplore()">🔍 חֲקִירַת מִלָּה</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ QUESTIONS ═══ -->
+<div class="screen" id="screen-questions">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage3')">→ חֲזָרָה</button>
+    <div class="screen-title-h">❓ שְׁאֵלוֹת הֲבָנָה</div>
+    <button class="btn-back" onclick="showHelp('קִרְאוּ כָּל שְׁאֵלָה וּבְחֲרוּ אֶת הַתְּשׁוּבָה הַנְּכוֹנָה. עַל כָּל תְּשׁוּבָה נְכוֹנָה תְּקַבְּלוּ נְקֻדּוֹת!')">❓</button>
+  </div>
+  <div class="card">
+    <div id="questionProgress" style="margin-bottom:10px;color:#888;font-size:0.9rem;"></div>
+    <div class="question-text" id="questionText"></div>
+    <div class="options-list" id="optionsList"></div>
+    <div id="questionFeedback" style="margin-top:12px;"></div>
+    <div style="margin-top:14px;text-align:center;">
+      <button class="btn btn-primary btn-small" id="nextQBtn" onclick="nextQuestion()" style="display:none;">הַבָּא →</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ ORDER ═══ -->
+<div class="screen" id="screen-order">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage3')">→ חֲזָרָה</button>
+    <div class="screen-title-h">📋 סֵדֶר אֵרוּעִים</div>
+    <button class="btn-back" onclick="showHelp('לִחְצוּ עַל כַּפְתּוֹרֵי הַחֵץ כְּדֵי לְהַזִּיז כָּל אֵרוּעַ לַמָּקוֹם הַנָּכוֹן בַּסִּיפּוּר.')">❓</button>
+  </div>
+  <div class="card">
+    <div style="margin-bottom:10px;font-weight:700;color:var(--desert-mid);">סַדְּרוּ אֶת הָאֵרוּעִים לְפִי הַסִּיפּוּר (לִחְצוּ עַל הַחִצִּים לְהַזָּזָה):</div>
+    <div id="orderList" class="sort-container"></div>
+    <div style="margin-top:14px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button class="btn btn-primary btn-small" onclick="checkOrder()">✅ בִּדְקוּ</button>
+      <button class="btn btn-secondary btn-small" onclick="startOrderEvents()">🔄 שׁוּב</button>
+    </div>
+    <div id="orderFeedback" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- ═══ FILL BLANKS ═══ -->
+<div class="screen" id="screen-fill">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage3')">→ חֲזָרָה</button>
+    <div class="screen-title-h">✏️ הַשְׁלָמַת מִשְׁפָּטִים</div>
+    <button class="btn-back" onclick="showHelp('בְּחֲרוּ אֶת הַמִּלָּה הַחֲסֵרָה בְּכָל מִשְׁפָּט מֵהָאֶפְשָׁרוּיוֹת.')">❓</button>
+  </div>
+  <div class="card">
+    <div id="fillProgress" style="margin-bottom:8px;color:#888;font-size:0.9rem;"></div>
+    <div id="fillSentence" style="font-size:1.1rem;margin-bottom:10px;color:var(--desert-dark);"></div>
+    <div id="fillOptions" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;"></div>
+    <div id="fillFeedback" style="margin-top:8px;"></div>
+  </div>
+</div>
+
+<!-- ═══ WORD EXPLORE ═══ -->
+<div class="screen" id="screen-wordexplore">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-stage3')">→ חֲזָרָה</button>
+    <div class="screen-title-h">🔍 חֲקִירַת מִלָּה</div>
+    <button class="btn-back" onclick="showHelp('נַחְקֹר מִלּוֹת מַפְתֵּחַ מֵהַסִּיפּוּר. תִּרְאוּ אֶת הַשֹּׁרֶשׁ, מִשְׁפַּחַת הַמִּלִּים, וְתִכְתְּבוּ מִשְׁפָּט מִשֶּׁלָּכֶם.')">❓</button>
+  </div>
+  <div id="wordExploreContainer"></div>
+</div>
+
+<!-- ═══ ACHIEVEMENTS ═══ -->
+<div class="screen" id="screen-achievements">
+  <div class="screen-header">
+    <button class="btn-back" onclick="goTo('screen-menu')">→ תַּפְרִיט</button>
+    <div class="screen-title-h">🏆 הִישָּׂגִים</div>
+  </div>
+  <div class="card">
+    <div style="text-align:center;margin-bottom:16px;">
+      <div class="timer-display" id="finalScore" style="color:var(--desert-mid);">0</div>
+      <div style="color:#666;font-size:1rem;">נְקֻדּוֹת כּוֹלְלוֹת</div>
+    </div>
+    <div class="achievements" id="achievementsList"></div>
+  </div>
+  <button class="btn btn-primary" onclick="goTo('screen-menu')">→ חִזְרוּ לְתַפְרִיט</button>
+</div>
+
+<script>
+// ═══════════ DATA ═══════════
+const storyText = `בַּתּוֹרָה מְסֻפָּר עַל יוֹסֵף בַּעַל הַחֲלוֹמוֹת. יוֹסֵף הָיָה נוֹהֵג לַחֲלֹם הַרְבֵּה חֲלוֹמוֹת. הוּא תָּמִיד הָיָה זוֹכֵר אֶת חֲלוֹמוֹתָיו וְנוֹהֵג לִפְתֹּר אוֹתָם, כְּלוֹמַר הוּא נִסָּה לְהָבִין אֶת הַמַּשְׁמָעוּת שֶׁל הַחֲלוֹמוֹת וְאֶת הַכַּוָּנָה שֶׁלָּהֶם.
+יוֹסֵף אָהַב לְסַפֵּר אֶת הַחֲלוֹמוֹת לְאֶחָד עָשָׂר אֶחָיו. בְּכָל חֲלוֹמוֹתָיו רָאָה יוֹסֵף אֶת עַצְמוֹ בַּעַל כֹּחַ וְשׁוֹלֵט בָּאֲחֵרִים, וְכַאֲשֶׁר הוּא סִפֵּר אֶת חֲלוֹמוֹתָיו לְאֶחָיו, הֵם כָּעֲסוּ עָלָיו מְאֹד. לַיְלָה אֶחָד חָלַם יוֹסֵף כִּי הַשֶּׁמֶשׁ, הַיָּרֵחַ וְאַחַד עָשָׂר הַכּוֹכָבִים מִשְׁתַּחֲוִים לוֹ, וְכִי אֲלֻמּוֹת הַשִּׁבֹּלִים שֶׁל אֶחָיו מִשְׁתַּחֲווֹת לַאֲלֻמָּה שֶׁלּוֹ. כַּאֲשֶׁר סִפֵּר יוֹסֵף אֶת הַחֲלוֹם לְאֶחָיו, הֵם הֶחְלִיטוּ לִמְכֹּר אוֹתוֹ לַאֲנָשִׁים מִמִּצְרַיִם.
+יוֹסֵף הִגִּיעַ לְמִצְרַיִם, וְשָׁם נִתְגַּלָּה כִּשְׁרוֹנוֹ שֶׁלּוֹ כְּפוֹתֵר חֲלוֹמוֹת. תְּחִלָּה פָּתַר יוֹסֵף אֶת הַחֲלוֹמוֹת שֶׁל שָׂרֵי פַרְעֹה, מֶלֶךְ מִצְרַיִם, וְאַחַר כָּךְ – גַּם אֶת הַחֲלוֹמוֹת שֶׁל פַּרְעֹה. בִּמְהֵרָה בָּלַט יוֹסֵף בְּחָכְמָתוֹ, וְהָפַךְ לְשַׂר וְיוֹעֵץ חָשׁוּב בְּמַמְלֶכֶת פַּרְעֹה.`;
+
+const memoryPairs = [
+  {word:'שׁוֹלֵט', match:'מִי שֶׁיֵּשׁ לוֹ שְׁלִיטָה עַל אֲחֵרִים'},
+  {word:'יוֹעֵץ', match:'מִי שֶׁעוֹזֵר לַאֲחֵרִים לְהַחְלִיט'},
+  {word:'פּוֹתֵר חֲלוֹמוֹת', match:'מִי שֶׁמֵּבִין מַה הַחֲלוֹם אוֹמֵר'},
+  {word:'אֶחָיו', match:'הָאַחִים שֶׁלּוֹ'},
+  {word:'אֲלֻמּוֹת', match:'צְרוֹרוֹת שִׁבֹּלִים קְשׁוּרוֹת יַחַד'},
+  {word:'בַּעַל כֹּחַ', match:'מִישֶׁהוּ חָזָק שֶׁיָּכוֹל לַעֲשׂוֹת דְּבָרִים גְּדוֹלִים'},
+  {word:'חָכְמָתוֹ', match:'הַיְּכֹלֶת שֶׁלּוֹ לַחְשֹׁב וְלִמְצֹא פִּתְרוֹנוֹת'},
+  {word:'מִשְׁתַּחֲוִים', match:'מִתְכּוֹפְפִים כְּדֵי לְהַרְאוֹת כָּבוֹד'},
+];
+
+const bingoWords = ['שׁוֹלֵט','יוֹעֵץ','אֶחָיו','אֲלֻמּוֹת','חָכְמָה','מִשְׁתַּחֲוִים','יוֹסֵף','שֶׁמֶשׁ','חֲלוֹמוֹת','יָרֵחַ','כּוֹכָבִים','לִמְכֹּר','כִּשְׁרוֹן','שִׁבֹּלִים','פַּרְעֹה','מִצְרַיִם'];
+const bingoClues = [
+  {clue:'מִי שֶׁיֵּשׁ לוֹ שְׁלִיטָה עַל אֲחֵרִים', ans:'שׁוֹלֵט'},
+  {clue:'מִי שֶׁעוֹזֵר לַאֲחֵרִים לְהַחְלִיט', ans:'יוֹעֵץ'},
+  {clue:'הָאַחִים שֶׁלּוֹ', ans:'אֶחָיו'},
+  {clue:'צְרוֹרוֹת שִׁבֹּלִים קְשׁוּרוֹת יַחַד', ans:'אֲלֻמּוֹת'},
+  {clue:'הַיְּכֹלֶת לַחְשֹׁב וְלִמְצֹא פִּתְרוֹנוֹת', ans:'חָכְמָה'},
+  {clue:'מִתְכּוֹפְפִים כְּדֵי לְהַרְאוֹת כָּבוֹד', ans:'מִשְׁתַּחֲוִים'},
+  {clue:'הַכּוֹכָב הַגָּדוֹל שֶׁמֵּאִיר וּמַחֲמֵם אֶת הָאָרֶץ', ans:'שֶׁמֶשׁ'},
+  {clue:'מַה שֶּׁרוֹאִים בַּשֵּׁנָה', ans:'חֲלוֹמוֹת'},
+  {clue:'לָתֵת מַשֶּׁהוּ לְמִישֶׁהוּ בְּתַמּוּרָה לְכֶסֶף', ans:'לִמְכֹּר'},
+  {clue:'מֶלֶךְ מִצְרַיִם הַקָּדוּם', ans:'פַּרְעֹה'},
+];
+
+const sortData = {
+  actions: ['אָהַב','רָאָה','סִפֵּר','חָלַם','הִגִּיעַ'],
+  objects: ['שֶּׁמֶשׁ','יָּרֵחַ','כּוֹכָבִים','אֲלֻמָּה','שִּׁבֹּלִים'],
+};
+
+const questions = [
+  {
+    q:'מָה יוֹסֵף הָיָה עוֹשֶׂה עִם חֲלוֹמוֹתָיו?',
+    opts:['שׁוֹכֵחַ אוֹתָם מִיָּד','זוֹכֵר וּפוֹתֵר אוֹתָם','מַסְתִּיר אוֹתָם','כּוֹתֵב אוֹתָם בְּסֵפֶר'],
+    ans:1,
+    explain:'נָכוֹן! יוֹסֵף תָּמִיד זָכַר אֶת חֲלוֹמוֹתָיו וְנִסָּה לְפוֹתְרָם – לְהָבִין אֶת מַשְׁמָעוּתָם.'
+  },
+  {
+    q:'לָמָּה הָאַחִים כָּעֲסוּ עַל יוֹסֵף?',
+    opts:['כִּי לָקַח אֶת אָכְלָם','כִּי בַּחֲלוֹמוֹתָיו רָאָה אֶת עַצְמוֹ שׁוֹלֵט בָּהֶם','כִּי לֹא עָזַר לָהֶם','כִּי הָלַךְ לְמִצְרַיִם'],
+    ans:1,
+    explain:'נָכוֹן! בְּכָל חֲלוֹמוֹתָיו יוֹסֵף רָאָה אֶת עַצְמוֹ שׁוֹלֵט בָּאֲחֵרִים, וְזֶה הִכְעִיס אוֹתָם.'
+  },
+  {
+    q:'מָה עָשׂוּ הָאַחִים לְיוֹסֵף אַחֲרֵי שֶׁסִּפֵּר לָהֶם אֶת חֲלוֹמוֹ?',
+    opts:['שָׁלְחוּ אוֹתוֹ לְפַרְעֹה','מָכְרוּ אוֹתוֹ לַאֲנָשִׁים מִמִּצְרַיִם','נָתְנוּ לוֹ מַתָּנוֹת','בִּקְשׁוּ מִמֶּנּוּ לִפְתֹּר חֲלוֹמוֹת'],
+    ans:1,
+    explain:'נָכוֹן! הָאַחִים הֶחְלִיטוּ לִמְכֹּר אֶת יוֹסֵף לַאֲנָשִׁים מִמִּצְרַיִם.'
+  },
+  {
+    q:'מָה הַלֶּקַח הַמֶּרְכָּזִי שֶׁל הַסִּיפּוּר?',
+    opts:['כְּדַאי לִשְׁמֹר חֲלוֹמוֹת לְעַצְמְךָ','כִּשְׁרוֹן וְחָכְמָה יְכוֹלִים לְהוֹבִיל לְהַצְלָחָה גְּדוֹלָה','מִצְרַיִם הִיא אֶרֶץ טוֹבָה','אָסוּר לַחֲלֹם'],
+    ans:1,
+    explain:'נָכוֹן! לְמַרְבֵּה הַקֻּשִׁי, כִּשְׁרוֹנוֹ וְחָכְמָתוֹ שֶׁל יוֹסֵף הֵבִיאוּ אוֹתוֹ לִהְיוֹת שַׂר וְיוֹעֵץ חָשׁוּב.'
+  },
+  {
+    q:'מָה הֵם כּוֹכָבִים?',
+    opts:['עֲנָנִים גְּדוֹלִים בַּשָּׁמַיִם','נְקֻדּוֹת אוֹר קְטַנּוֹת שֶׁנִּרְאוֹת בַּשָּׁמַיִם בַּלַּיְלָה','פְּרָחִים שֶׁגְּדֵלִים בַּשָּׂדֶה','מְנוֹרוֹת עַל עַמּוּדִים'],
+    ans:1,
+    explain:'נָכוֹן! כּוֹכָבִים הֵם נְקֻדּוֹת אוֹר שֶׁרוֹאִים בַּשָּׁמַיִם בַּלַּיְלָה. בַּחֲלוֹמוֹ שֶׁל יוֹסֵף אַחַד עָשָׂר כּוֹכָבִים הִשְׁתַּחֲווּ לוֹ!'
+  },
+  {
+    q:'מָה הֵן שִׁבֹּלִים?',
+    opts:['כֵּלִים לְבִישּׁוּל','עַנְפֵי עֵצִים','חֶלְקֵי הַצֶּמַח שֶׁבָּהֶם גָּדֵל הַגַּרְעִין שֶׁל הַדָּגָן – כְּמוֹ חִיטָּה','אֲבָנִים בַּשָּׂדֶה'],
+    ans:2,
+    explain:'נָכוֹן! שִׁבֹּלִים הֵן חֵלֶק מִצֶּמַח הַדָּגָן שֶׁבּוֹ גְּדֵלִים הַגַּרְעִינִים. בַּחֲלוֹם שֶׁל יוֹסֵף הַשִּׁבֹּלִים שֶׁל אֶחָיו הִשְׁתַּחֲווּ לַשִּׁבֹּלֶת שֶׁלּוֹ.'
+  },
+  {
+    q:'מַהִי מִצְרַיִם?',
+    opts:['עִיר קְטַנָּה בְּיִשְׂרָאֵל','אֶרֶץ גְּדוֹלָה בְּצָפוֹן אַפְרִיקָה שֶׁבָּהּ זָרַם נְהַר הַנִּילוּס וְשָׁלַט פַּרְעֹה','אִי בָּאוֹקְיָנוֹס','עִיר בִּלְבָנוֹן'],
+    ans:1,
+    explain:'נָכוֹן! מִצְרַיִם הִיא אֶרֶץ גְּדוֹלָה וְעַתִּיקָה. יוֹסֵף נִמְכַּר לְמִצְרַיִם וְשָׁם הָפַךְ לְשַׂר חָשׁוּב.'
+  },
+  {
+    q:'מָה הוּא יָרֵחַ?',
+    opts:['כּוֹכָב קָטָן מְאֹד','הַגּוּף הַגָּדוֹל שֶׁמֵּאִיר בַּשָּׁמַיִם בַּלַּיְלָה וּמַקִּיף אֶת כַּדּוּר הָאָרֶץ','מְנוֹרָה עֲנָקִית','עָנָן לָבָן'],
+    ans:1,
+    explain:'נָכוֹן! הַיָּרֵחַ הוּא הַגּוּף הַשָּׁמַיְמִי הַגָּדוֹל שֶׁמֵּאִיר בַּלַּיְלָה. בַּחֲלוֹמוֹ שֶׁל יוֹסֵף גַּם הַיָּרֵחַ הִשְׁתַּחֲווָה לוֹ!'
+  },
+  {
+    q:'מִי הָיָה יוֹסֵף?',
+    opts:['מֶלֶךְ מִצְרַיִם','דְּמוּת מֵהַתּוֹרָה שֶׁחַי לִפְנֵי אַלְפֵי שָׁנִים, בַּעַל כִּשְׁרוֹן לִפְתֹּר חֲלוֹמוֹת','חַיָּל שֶׁל פַּרְעֹה','רוֹעֶה צֹאן מִצְרִי'],
+    ans:1,
+    explain:'נָכוֹן! יוֹסֵף הָיָה דְּמוּת מֵהַתּוֹרָה שֶׁחַי לִפְנֵי אַלְפֵי שָׁנִים, וְהָיָה יָדוּעַ בְּכִשְׁרוֹנוֹ לִפְתֹּר חֲלוֹמוֹת.'
+  },
+  {
+    q:'מָה הוּא כִּשְׁרוֹן?',
+    opts:['כְּלִי עֲבוֹדָה','יְכֹלֶת מְיֻחֶדֶת שֶׁיֵּשׁ לְאָדָם לַעֲשׂוֹת מַשֶּׁהוּ טוֹב מֵאֲחֵרִים','סוּג שֶׁל אֹכֶל','כּוֹבַע מְיֻחָד'],
+    ans:1,
+    explain:'נָכוֹן! כִּשְׁרוֹן הוּא יְכֹלֶת מְיֻחֶדֶת. יוֹסֵף הָיָה בַּעַל כִּשְׁרוֹן מְיֻחָד – הוּא יָדַע לִפְתֹּר חֲלוֹמוֹת!'
+  },
+];
+
+const events = [
+  {text:'יוֹסֵף הָיָה פּוֹתֵר חֲלוֹמוֹת וְסִפֵּר לְאֶחָיו אֶת חֲלוֹמוֹתָיו', correct:1},
+  {text:'הָאַחִים כָּעֲסוּ עַל יוֹסֵף וּמָכְרוּ אוֹתוֹ לַאֲנָשִׁים מִמִּצְרַיִם', correct:2},
+  {text:'יוֹסֵף הִגִּיעַ לְמִצְרַיִם וּפָתַר אֶת חֲלוֹמוֹת שָׂרֵי פַרְעֹה', correct:3},
+  {text:'יוֹסֵף פָּתַר גַּם אֶת חֲלוֹמוֹת פַּרְעֹה עַצְמוֹ', correct:4},
+  {text:'יוֹסֵף הָפַךְ לְשַׂר וְיוֹעֵץ חָשׁוּב בְּמַמְלֶכֶת פַּרְעֹה', correct:5},
+];
+
+const fillSentences = [
+  {before:'יוֹסֵף הָיָה נוֹהֵג לִפְתֹּר אֶת', blank:'חֲלוֹמוֹתָיו', after:'וּלְהָבִין אֶת מַשְׁמָעוּתָם.', opts:['סִפּוּרָיו','חֲלוֹמוֹתָיו','אֶחָיו'], ans:'חֲלוֹמוֹתָיו'},
+  {before:'בַּחֲלוֹמוֹ רָאָה יוֹסֵף אֶת הַשֶּׁמֶשׁ, הַיָּרֵחַ וְאַחַד עָשָׂר', blank:'הַכּוֹכָבִים', after:'מִשְׁתַּחֲוִים לוֹ.', opts:['הַנְּבִיאִים','הַכּוֹכָבִים','הַמְּלָכִים'], ans:'הַכּוֹכָבִים'},
+  {before:'הָאַחִים הֶחְלִיטוּ', blank:'לִמְכֹּר', after:'אֶת יוֹסֵף לַאֲנָשִׁים מִמִּצְרַיִם.', opts:['לִשְׁלֹחַ','לִמְכֹּר','לְהַכּוֹת'], ans:'לִמְכֹּר'},
+  {before:'יוֹסֵף הָפַךְ לְשַׂר וְ', blank:'יוֹעֵץ', after:'חָשׁוּב בְּמַמְלֶכֶת פַּרְעֹה.', opts:['חָבֵר','יוֹעֵץ','עֶבֶד'], ans:'יוֹעֵץ'},
+];
+
+const wordExploreData = [
+  {
+    word:'חֲלוֹמוֹת',
+    root:'ח-ל-מ',
+    meaning:'תמונות ומחשבות שרואים בזמן שינה',
+    family:['חֲלוֹם','חוֹלֵם','חָלַם','חֲלוֹמוֹת'],
+    example:'יוסף חָלַם חֲלוֹמוֹת מיוחדים בכל לילה.',
+  },
+  {
+    word:'כִּשְׁרוֹן',
+    root:'כ-ש-ר',
+    meaning:'יכולת מיוחדת שיש לאדם לעשות דבר מה טוב',
+    family:['כִּשְׁרוֹן','כָּשִׁיר','כְּשָׁרִים','הִכְשִׁיר'],
+    example:'נִתְגַּלָּה כִּשְׁרוֹנוֹ של יוסף כפותר חלומות.',
+  },
+  {
+    word:'לִפְתֹּר',
+    root:'פ-ת-ר',
+    meaning:'להסביר את המשמעות של חלום או חידה',
+    family:['פָּתַר','פּוֹתֵר','פִּתְרוֹן','לִפְתֹּר'],
+    example:'יוֹסֵף יָדַע לִפְתֹּר חֲלוֹמוֹת וּלְהָבִין אֶת מַשְׁמָעוּתָם.',
+  },
+];
+
+// ═══════════ KEYWORDS ═══════════
+const kwTargets = [
+  {
+    label:'חֲלוֹמוֹת / הַחֲלוֹמוֹת / חֲלוֹמוֹתָיו 💭',
+    color0:'#e8f5e9', color1:'#4a8c3f',
+    stripped:['חלומות','החלומות','חלומותיו','חלום','החלום'],
+    correctCount:11
+  },
+  {
+    label:'יוֹסֵף 👦',
+    color0:'#fff3e0', color1:'var(--desert-warm)',
+    stripped:['יוסף'],
+    correctCount:9
+  },
+];
+let kwCounts = {0:0, 1:0};
+
+function getTargetIdx(word) {
+  const s = word.replace(/[\u05b0-\u05c7]/g,'');
+  for(let i=0;i<kwTargets.length;i++){
+    if(kwTargets[i].stripped.includes(s)) return i;
+  }
+  return -1;
+}
+
+// ═══════════ STATE ═══════════
+let state = {
+  score:0,
+  completed:{stage1:false,stage2:false,stage3:false},
+  achievements:{memory:false,bingo:false,speed:false,questions:false,all:false},
+  timings:[], currentQ:0, fillIdx:0, orderItems:[],
+};
+
+// ═══════════ NAVIGATION ═══════════
+function goTo(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  window.scrollTo(0,0);
+  updateScoreDisplay();
+}
+function updateScoreDisplay(){
+  const el=document.getElementById('totalScore');
+  if(el) el.textContent='⭐ '+state.score+' נקודות';
+  const fs=document.getElementById('finalScore');
+  if(fs) fs.textContent=state.score;
+  const p=document.getElementById('mainProgress');
+  if(p) p.style.width=Math.round(Object.values(state.completed).filter(Boolean).length/3*100)+'%';
+  ['1','2','3'].forEach(n=>{
+    const b=document.getElementById('badge'+n);
+    if(!b) return;
+    b.textContent=state.completed['stage'+n]?'✅ הושלם':'חדש';
+    b.className='menu-badge'+(state.completed['stage'+n]?' done':'');
+  });
+}
+function showHelp(txt){ document.getElementById('helpText').textContent=txt; document.getElementById('helpModal').classList.add('open'); }
+function closeHelp(){ document.getElementById('helpModal').classList.remove('open'); }
+function addScore(pts){ state.score+=pts; updateScoreDisplay(); confetti(); }
+function confetti(){
+  const wrap=document.createElement('div'); wrap.className='confetti-wrap'; document.body.appendChild(wrap);
+  const colors=['#f5c842','#6dbf5e','#c4782a','#e8874a','#4fc3f7'];
+  for(let i=0;i<30;i++){
+    const p=document.createElement('div'); p.className='confetti-piece';
+    p.style.cssText=`left:${Math.random()*100}%;background:${colors[i%colors.length]};animation-delay:${Math.random()*0.5}s`;
+    wrap.appendChild(p);
+  }
+  setTimeout(()=>wrap.remove(),2500);
+}
+
+// ═══════════ DESERT BG ═══════════
+function buildDesert(){
+  const bg=document.getElementById('desertBg');
+  // Stars
+  for(let i=0;i<60;i++){
+    const s=document.createElement('div'); s.className='star';
+    const size=Math.random()*3+1;
+    s.style.cssText=`width:${size}px;height:${size}px;top:${Math.random()*55}%;left:${Math.random()*100}%;--dur:${2+Math.random()*3}s;--delay:${Math.random()*3}s`;
+    bg.appendChild(s);
+  }
+  // Pyramids
+  const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+  svg.setAttribute('viewBox','0 0 1200 200'); svg.setAttribute('preserveAspectRatio','none');
+  svg.className='pyramids';
+  svg.innerHTML=`
+    <polygon points="100,200 300,20 500,200" fill="#c9a84c" opacity="0.7"/>
+    <polygon points="350,200 550,50 750,200" fill="#b8922a" opacity="0.8"/>
+    <polygon points="650,200 820,70 990,200" fill="#d4b86a" opacity="0.6"/>
+    <polygon points="900,200 1050,90 1200,200" fill="#c9a84c" opacity="0.5"/>
+  `;
+  bg.appendChild(svg);
+  // Camel
+  const camel=document.createElement('div'); camel.className='camel-wrap';
+  camel.innerHTML=`<svg width="80" height="50" viewBox="0 0 80 50">
+    <ellipse cx="40" cy="35" rx="25" ry="12" fill="#8b4513"/>
+    <ellipse cx="20" cy="28" rx="10" ry="8" fill="#8b4513"/>
+    <ellipse cx="30" cy="15" rx="6" ry="10" fill="#8b4513"/>
+    <ellipse cx="30" cy="8" rx="5" ry="5" fill="#a0522d"/>
+    <rect x="15" y="40" width="6" height="10" fill="#8b4513" rx="2"/>
+    <rect x="25" y="40" width="6" height="10" fill="#8b4513" rx="2"/>
+    <rect x="45" y="40" width="6" height="10" fill="#8b4513" rx="2"/>
+    <rect x="55" y="40" width="6" height="10" fill="#8b4513" rx="2"/>
+    <circle cx="32" cy="6" r="2" fill="white"/>
+    <ellipse cx="24" cy="28" rx="5" ry="4" fill="#a0522d"/>
+  </svg>`;
+  bg.appendChild(camel);
+}
+buildDesert();
+
+// ═══════════ MEMORY ═══════════
+let memFlipped=[],memMatched=0,memMoves=0,memLocked=false;
+function startMemory(){
+  goTo('screen-memory');
+  memFlipped=[];memMatched=0;memMoves=0;memLocked=false;
+  document.getElementById('memScore').textContent='זוגות: 0/8';
+  document.getElementById('memMoves').textContent='מהלכים: 0';
+  const cards=[];
+  memoryPairs.forEach((p,i)=>{
+    cards.push({pairId:i,content:p.word});
+    cards.push({pairId:i,content:p.match});
+  });
+  cards.sort(()=>Math.random()-0.5);
+  const grid=document.getElementById('memoryGrid');
+  grid.innerHTML='';
+  cards.forEach(c=>{
+    const el=document.createElement('div');
+    el.className='mem-card';
+    el.dataset.pairId=c.pairId; el.dataset.content=c.content;
+    el.innerHTML='<span style="font-size:1.5rem">🌙</span>';
+    el.addEventListener('click',()=>flipMem(el));
+    grid.appendChild(el);
+  });
+}
+function flipMem(el){
+  if(memLocked||el.classList.contains('flipped')||el.classList.contains('matched')) return;
+  el.classList.add('flipped'); el.textContent=el.dataset.content;
+  memFlipped.push(el);
+  if(memFlipped.length===2){
+    memMoves++;
+    document.getElementById('memMoves').textContent='מהלכים: '+memMoves;
+    memLocked=true;
+    setTimeout(()=>{
+      if(memFlipped[0].dataset.pairId===memFlipped[1].dataset.pairId){
+        memFlipped.forEach(e=>e.classList.add('matched'));
+        memMatched++;
+        document.getElementById('memScore').textContent='זוגות: '+memMatched+'/8';
+        if(memMatched===8){ addScore(50); state.achievements.memory=true; state.completed.stage1=true; setTimeout(()=>{alert('🎉 כל הכבוד! מצאתם את כל הזוגות! +50 נקודות'); updateAchievements();},300); }
+      } else {
+        memFlipped.forEach(e=>{ e.classList.remove('flipped'); e.innerHTML='<span style="font-size:1.5rem">🌙</span>'; });
+      }
+      memFlipped=[];memLocked=false;
+    },900);
+  }
+}
+
+// ═══════════ BINGO ═══════════
+let bingoUsed=[],bingoWon=false;
+function startBingo(){
+  goTo('screen-bingo');
+  bingoUsed=[];bingoWon=false;
+  document.getElementById('bingoClue').textContent='לחצו על "הגרל שאלה" כדי להתחיל!';
+  const shuffled=[...bingoWords].sort(()=>Math.random()-0.5).slice(0,16);
+  const grid=document.getElementById('bingoGrid');
+  grid.innerHTML='';
+  shuffled.forEach(w=>{
+    const el=document.createElement('div'); el.className='bingo-cell';
+    el.textContent=w; el.dataset.word=w;
+    el.addEventListener('click',()=>markBingo(el,w));
+    grid.appendChild(el);
+  });
+}
+function drawBingo(){
+  const rem=bingoClues.filter(c=>!bingoUsed.includes(c.ans));
+  if(!rem.length){ document.getElementById('bingoClue').textContent='כל השאלות הוגרלו!'; return; }
+  const clue=rem[Math.floor(Math.random()*rem.length)];
+  document.getElementById('bingoClue').textContent='💭 '+clue.clue;
+  document.getElementById('bingoClue').dataset.ans=clue.ans;
+}
+function markBingo(el,word){
+  const ans=document.getElementById('bingoClue').dataset.ans;
+  if(!ans) return;
+  const strip=w=>w.replace(/[\u05b0-\u05c7]/g,'');
+  if(strip(word)===strip(ans)){
+    el.classList.add('marked'); bingoUsed.push(ans); addScore(10);
+    document.getElementById('bingoClue').textContent='✅ נכון! לחצו לשאלה הבאה.';
+    document.getElementById('bingoClue').dataset.ans='';
+    checkBingo();
+  } else { el.style.animation='pulse 0.3s'; setTimeout(()=>el.style.animation='',400); }
+}
+function checkBingo(){
+  const cells=Array.from(document.querySelectorAll('.bingo-cell'));
+  const marked=cells.map(c=>c.classList.contains('marked'));
+  const lines=[[0,1,2,3],[4,5,6,7],[8,9,10,11],[12,13,14,15],[0,4,8,12],[1,5,9,13],[2,6,10,14],[3,7,11,15],[0,5,10,15],[3,6,9,12]];
+  lines.forEach(line=>{
+    if(line.every(i=>marked[i])&&!bingoWon){
+      bingoWon=true; line.forEach(i=>cells[i].classList.add('bingo-win'));
+      addScore(30); state.achievements.bingo=true; state.completed.stage1=true;
+      setTimeout(()=>{alert('🎯 BINGO! מדהים! +30 נקודות'); updateAchievements();},300);
+    }
+  });
+}
+
+// ═══════════ SORT ═══════════
+let sortDragSrc=null;
+function startSort1(){
+  goTo('screen-sort1');
+  document.getElementById('sortFeedback').innerHTML='';
+  document.getElementById('zone-actions').innerHTML='';
+  document.getElementById('zone-objects').innerHTML='';
+  const all=[...sortData.actions,...sortData.objects].sort(()=>Math.random()-0.5);
+  const container=document.getElementById('sort-words');
+  container.innerHTML='';
+  [document.getElementById('zone-actions'),document.getElementById('zone-objects'),container].forEach(zone=>{
+    zone.addEventListener('dragover',e=>{e.preventDefault();zone.style.opacity='0.7';});
+    zone.addEventListener('dragleave',()=>zone.style.opacity='1');
+    zone.addEventListener('drop',e=>{
+      e.preventDefault();zone.style.opacity='1';
+      if(!sortDragSrc) return;
+      zone.appendChild(sortDragSrc);
+      const zid=zone.id==='zone-actions'?'actions':zone.id==='zone-objects'?'objects':'';
+      sortDragSrc.dataset.zone=zid;
+      sortDragSrc.style.background=zid==='actions'?'#4a8c3f':zid==='objects'?'var(--desert-warm)':'var(--desert-mid)';
+      sortDragSrc.style.border='none'; sortDragSrc=null;
+    });
+  });
+  all.forEach(w=>{
+    const chip=document.createElement('div'); chip.className='fill-chip';
+    chip.textContent=w; chip.style.background='var(--desert-mid)';
+    chip.draggable=true; chip.dataset.zone='';
+    chip.addEventListener('dragstart',()=>{sortDragSrc=chip;setTimeout(()=>chip.style.opacity='0.4',0);});
+    chip.addEventListener('dragend',()=>{chip.style.opacity='1';sortDragSrc=null;});
+    chip.addEventListener('click',()=>{
+      const cur=chip.dataset.zone;
+      if(cur===''){chip.dataset.zone='actions';chip.style.background='#4a8c3f';document.getElementById('zone-actions').appendChild(chip);}
+      else if(cur==='actions'){chip.dataset.zone='objects';chip.style.background='var(--desert-warm)';document.getElementById('zone-objects').appendChild(chip);}
+      else{chip.dataset.zone='';chip.style.background='var(--desert-mid)';container.appendChild(chip);}
+      chip.style.border='none';
+    });
+    container.appendChild(chip);
+  });
+}
+function checkSort(){
+  let correct=0;
+  document.querySelectorAll('[data-zone]').forEach(chip=>{
+    const w=chip.textContent, zone=chip.dataset.zone;
+    if(!zone) return;
+    const isAction=sortData.actions.some(a=>a.replace(/[\u05b0-\u05c7]/g,'')=== w.replace(/[\u05b0-\u05c7]/g,''));
+    const ok=(isAction&&zone==='actions')||(!isAction&&zone==='objects');
+    chip.style.border=ok?'3px solid var(--correct)':'3px solid var(--wrong)';
+    if(ok) correct++;
+  });
+  const fb=document.getElementById('sortFeedback');
+  if(correct===10){addScore(30);state.completed.stage1=true;fb.innerHTML='<div class="feedback-box correct">🎉 מְצֻיָּן! הַכֹּל נָכוֹן! +30 נְקֻדּוֹת</div>';}
+  else fb.innerHTML=`<div class="feedback-box wrong">✏️ ${correct} מִתּוֹךְ 10 נָכוֹן. נַסּוּ שׁוּב!</div>`;
+}
+
+// ═══════════ KEYWORDS ═══════════
+function startKeywords(){
+  goTo('screen-keywords');
+  kwCounts={0:0,1:0};
+  document.getElementById('keywordsFeedback').innerHTML='';
+  updateKwCounters();
+  const container=document.getElementById('keywordsText');
+  container.innerHTML='';
+  const allWords=[];
+  storyText.split('\n').forEach(line=>line.split(' ').forEach(w=>{if(w) allWords.push(w);}));
+  const strip=w=>w.replace(/[\u05b0-\u05c7]/g,'');
+  const tags=allWords.map((w,i)=>{
+    const clean=w.replace(/[^\u05d0-\u05ea\u05b0-\u05c7]/g,'');
+    return getTargetIdx(clean);
+  });
+  let wordIdx=0;
+  storyText.split('\n').forEach(line=>{
+    const lineDiv=document.createElement('div'); lineDiv.style.marginBottom='10px';
+    line.split(' ').forEach(w=>{
+      if(!w) return;
+      const targetIdx=tags[wordIdx++];
+      const span=document.createElement('span'); span.className='word';
+      span.textContent=w+' ';
+      span.onclick=()=>{
+        if(targetIdx<0){span.style.background='#fdecea';span.style.borderRadius='4px';setTimeout(()=>span.style.background='',600);return;}
+        span.classList.toggle('highlighted');
+        if(span.classList.contains('highlighted')){
+          span.style.background=targetIdx===0?'#b9f6ca':'#ffe0b2';
+          kwCounts[targetIdx]++;
+        } else {span.style.background='';kwCounts[targetIdx]=Math.max(0,kwCounts[targetIdx]-1);}
+        updateKwCounters();
+      };
+      lineDiv.appendChild(span);
+    });
+    container.appendChild(lineDiv);
+  });
+}
+function updateKwCounters(){
+  const el=document.getElementById('kwCounters');
+  if(!el) return;
+  el.innerHTML=kwTargets.map((t,i)=>`
+    <div style="display:flex;align-items:center;gap:8px;background:${t.color0};border-radius:10px;padding:8px 14px;flex-wrap:wrap;">
+      <span style="font-weight:900;font-size:0.95rem;color:#333;">${t.label}</span>
+      <span style="background:${t.color1};color:white;border-radius:50%;width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-weight:900;font-size:1.1rem;">${kwCounts[i]}</span>
+      <span style="font-size:0.85rem;color:#666;">פְּעָמִים</span>
+    </div>`).join('');
+}
+function checkKeywords(){
+  const fb=document.getElementById('keywordsFeedback');
+  let pts=0, lines='';
+  kwTargets.forEach((t,i)=>{
+    const got=kwCounts[i], exp=t.correctCount, ok=got===exp;
+    if(ok) pts+=20;
+    lines+=`<div style="margin:6px 0;">${ok?'✅':'❌'} <strong>${t.label}</strong>: סִמַּנְתֶּם ${got} פְּעָמִים – ${ok?'נָכוֹן! 🎉':'בַּטֶּקְסְט יֵשׁ '+exp+' פְּעָמִים. נַסּוּ שׁוּב!'}</div>`;
+  });
+  addScore(pts); state.completed.stage2=true;
+  fb.innerHTML=`<div class="feedback-box ${pts>0?'correct':'wrong'}">${lines}${pts>0?'<br>🌟 +'+pts+' נְקֻדּוֹת!':''}</div>`;
+}
+function resetKeywords(){ startKeywords(); }
+
+// ═══════════ GUIDED ═══════════
+let guidedInterval=null,guidedIdx=0,guidedSpeed=2000,guidedPaused=false;
+function startGuided(){
+  goTo('screen-guided'); guidedIdx=0; guidedPaused=false;
+  if(guidedInterval) clearInterval(guidedInterval);
+  const container=document.getElementById('guidedText'); container.innerHTML='';
+  storyText.split('\n').forEach(line=>{
+    const d=document.createElement('div'); d.style.marginBottom='10px';
+    line.split(' ').forEach(w=>{if(!w)return; const s=document.createElement('span');s.className='word';s.textContent=w+' ';d.appendChild(s);});
+    container.appendChild(d);
+  });
+}
+function setSpeed(ms,id){
+  guidedSpeed=ms;
+  ['slow','normal','fast'].forEach(s=>document.getElementById('spd-'+s).classList.remove('active'));
+  document.getElementById('spd-'+id).classList.add('active');
+  if(guidedInterval){clearInterval(guidedInterval);if(!guidedPaused)playGuided(true);}
+}
+function playGuided(resume=false){
+  guidedPaused=false; if(!resume) guidedIdx=0;
+  const words=document.querySelectorAll('#guidedText .word');
+  words.forEach(w=>w.classList.remove('current'));
+  if(guidedInterval) clearInterval(guidedInterval);
+  guidedInterval=setInterval(()=>{
+    if(guidedIdx>0) words[guidedIdx-1].classList.remove('current');
+    if(guidedIdx>=words.length){clearInterval(guidedInterval);addScore(20);state.completed.stage2=true;return;}
+    words[guidedIdx].classList.add('current');
+    words[guidedIdx].scrollIntoView({block:'nearest',behavior:'smooth'});
+    guidedIdx++;
+  },guidedSpeed);
+}
+function pauseGuided(){clearInterval(guidedInterval);guidedPaused=true;}
+function resetGuided(){clearInterval(guidedInterval);startGuided();}
+
+// ═══════════ REPEATED ═══════════
+let timerInterval=null,timerSecs=0,repeatRound=1,roundTimes=[];
+function startRepeated(){
+  goTo('screen-repeated'); repeatRound=1;roundTimes=[];timerSecs=0;
+  document.getElementById('timerDisplay').textContent='00:00';
+  document.getElementById('repeatRoundInfo').textContent='סַבְב 1 מִתּוֹךְ 3';
+  document.getElementById('timerComparison').innerHTML='';
+  document.getElementById('repeatedText').innerHTML=storyText.split('\n').map(l=>`<div style="margin-bottom:10px">${l}</div>`).join('');
+}
+function startTimer(){
+  if(timerInterval) clearInterval(timerInterval); timerSecs=0;
+  document.getElementById('timerDisplay').textContent='00:00';
+  timerInterval=setInterval(()=>{
+    timerSecs++;
+    const m=Math.floor(timerSecs/60).toString().padStart(2,'0'),s=(timerSecs%60).toString().padStart(2,'0');
+    document.getElementById('timerDisplay').textContent=m+':'+s;
+  },1000);
+}
+function stopTimer(){
+  if(!timerInterval) return; clearInterval(timerInterval);timerInterval=null;
+  roundTimes.push(timerSecs);
+  let html='';
+  roundTimes.forEach((t,i)=>{
+    const imp=i>0&&t<roundTimes[i-1]?` ✅ הִשְׁתַּפַּרְתֶּם בְּ-${roundTimes[i-1]-t} שְׁנִיּוֹת`:'';
+    html+=`<div class="timer-round"><div class="timer-round-num">${t}s</div><div class="timer-round-label">סַבְב ${i+1}${imp}</div></div>`;
+  });
+  document.getElementById('timerComparison').innerHTML=html;
+  if(roundTimes.length>=2&&roundTimes[roundTimes.length-1]<roundTimes[roundTimes.length-2]){addScore(20);state.achievements.speed=true;state.completed.stage2=true;}
+  if(repeatRound<3){repeatRound++;document.getElementById('repeatRoundInfo').textContent=`סַבְב ${repeatRound} מִתּוֹךְ 3`;}
+  else{addScore(30);state.completed.stage2=true;alert('🎉 סִיַּמְתֶּם 3 סַבְּבִים! כָּל הַכָּבוֹד! +30 נְקֻדּוֹת');updateAchievements();}
+}
+
+// ═══════════ QUESTIONS ═══════════
+function startQuestions(){ goTo('screen-questions');state.currentQ=0;showQuestion(); }
+function showQuestion(){
+  const q=questions[state.currentQ];
+  document.getElementById('questionProgress').textContent=`שְׁאֵלָה ${state.currentQ+1} מִתּוֹךְ ${questions.length}`;
+  document.getElementById('questionText').textContent=q.q;
+  document.getElementById('questionFeedback').innerHTML='';
+  document.getElementById('nextQBtn').style.display='none';
+  const list=document.getElementById('optionsList'); list.innerHTML='';
+  q.opts.forEach((opt,i)=>{
+    const btn=document.createElement('button'); btn.className='option-btn'; btn.textContent=opt;
+    btn.onclick=()=>answerQ(i,q,list); list.appendChild(btn);
+  });
+}
+function answerQ(i,q,list){
+  list.querySelectorAll('.option-btn').forEach(b=>b.disabled=true);
+  list.querySelectorAll('.option-btn')[i].classList.add(i===q.ans?'correct':'wrong');
+  list.querySelectorAll('.option-btn')[q.ans].classList.add('correct');
+  const fb=document.getElementById('questionFeedback');
+  if(i===q.ans){fb.innerHTML=`<div class="feedback-box correct">✅ ${q.explain} +10 נְקֻדּוֹת</div>`;addScore(10);}
+  else fb.innerHTML=`<div class="feedback-box wrong">❌ נַסּוּ לַחֲזֹר לַטֶּקְסְט וְלִמְצֹא אֶת הַתְּשׁוּבָה. ${q.explain}</div>`;
+  document.getElementById('nextQBtn').style.display='inline-flex';
+}
+function nextQuestion(){
+  state.currentQ++;
+  if(state.currentQ>=questions.length){
+    state.achievements.questions=true;state.completed.stage3=true;checkAllDone();
+    alert('🎉 עֲנִיתֶם עַל כָּל הַשְּׁאֵלוֹת! כָּל הַכָּבוֹד!');updateAchievements();goTo('screen-stage3');
+  } else showQuestion();
+}
+
+// ═══════════ ORDER ═══════════
+function startOrderEvents(){
+  goTo('screen-order'); document.getElementById('orderFeedback').innerHTML='';
+  state.orderItems=[...events].sort(()=>Math.random()-0.5); renderOrder();
+}
+function renderOrder(){
+  const list=document.getElementById('orderList'); list.innerHTML='';
+  state.orderItems.forEach((item,i)=>{
+    const div=document.createElement('div'); div.className='sort-item';
+    div.innerHTML=`<div class="sort-num">${i+1}</div><div style="flex:1">${item.text}</div>
+      <div style="display:flex;gap:4px;">
+        <button onclick="moveOrder(${i},-1)" style="background:var(--desert-warm);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:1rem;">↑</button>
+        <button onclick="moveOrder(${i},1)" style="background:var(--desert-warm);color:white;border:none;border-radius:6px;padding:4px 10px;cursor:pointer;font-size:1rem;">↓</button>
+      </div>`;
+    list.appendChild(div);
+  });
+}
+function moveOrder(i,dir){
+  const j=i+dir; if(j<0||j>=state.orderItems.length) return;
+  [state.orderItems[i],state.orderItems[j]]=[state.orderItems[j],state.orderItems[i]]; renderOrder();
+}
+function checkOrder(){
+  let correct=0;
+  state.orderItems.forEach((item,i)=>{if(item.correct===i+1) correct++;});
+  const fb=document.getElementById('orderFeedback');
+  if(correct===events.length){addScore(30);state.completed.stage3=true;fb.innerHTML='<div class="feedback-box correct">🎉 מְצֻיָּן! הַסֵּדֶר נָכוֹן! +30 נְקֻדּוֹת</div>';}
+  else fb.innerHTML=`<div class="feedback-box wrong">✏️ ${correct} מִתּוֹךְ ${events.length} בַּמָּקוֹם הַנָּכוֹן. נַסּוּ שׁוּב!</div>`;
+}
+
+// ═══════════ FILL BLANKS ═══════════
+function startFillBlanks(){ goTo('screen-fill');state.fillIdx=0;showFill(); }
+function showFill(){
+  const f=fillSentences[state.fillIdx];
+  document.getElementById('fillProgress').textContent=`מִשְׁפָּט ${state.fillIdx+1} מִתּוֹךְ ${fillSentences.length}`;
+  document.getElementById('fillSentence').innerHTML=`${f.before} <span style="background:#fff3cd;padding:2px 10px;border-radius:6px;border:2px dashed #f9a825;">_____</span> ${f.after}`;
+  document.getElementById('fillFeedback').innerHTML='';
+  const opts=document.getElementById('fillOptions'); opts.innerHTML='';
+  [...f.opts].sort(()=>Math.random()-0.5).forEach(opt=>{
+    const btn=document.createElement('button'); btn.className='fill-chip'; btn.textContent=opt;
+    btn.onclick=()=>checkFill(opt,f,btn); opts.appendChild(btn);
+  });
+}
+function checkFill(choice,f,btn){
+  const fb=document.getElementById('fillFeedback');
+  if(choice===f.ans){
+    btn.style.background='var(--correct)';
+    fb.innerHTML='<div class="feedback-box correct">✅ נָכוֹן! +10 נְקֻדּוֹת</div>';
+    addScore(10); state.completed.stage3=true;
+    setTimeout(()=>{ state.fillIdx++; if(state.fillIdx>=fillSentences.length){alert('🎉 כָּל הַמִּשְׁפָּטִים! כָּל הַכָּבוֹד!');goTo('screen-stage3');}else showFill(); },1000);
+  } else {
+    btn.style.background='var(--wrong)';
+    fb.innerHTML='<div class="feedback-box wrong">❌ נַסּוּ שׁוּב!</div>';
+    setTimeout(()=>btn.style.background='var(--desert-mid)',700);
+  }
+}
+
+// ═══════════ WORD EXPLORE ═══════════
+function startWordExplore(){
+  goTo('screen-wordexplore');
+  const container=document.getElementById('wordExploreContainer'); container.innerHTML='';
+  wordExploreData.forEach(wd=>{
+    const card=document.createElement('div'); card.className='card';
+    card.innerHTML=`
+      <div class="word-card-explore">
+        <div class="word-big">${wd.word}</div>
+        <div style="font-size:0.9rem;opacity:0.8;">שֹׁרֶשׁ: ${wd.root}</div>
+        <div style="margin-top:6px;">${wd.meaning}</div>
+        <div class="word-family">${wd.family.map(w=>`<span class="family-chip">${w}</span>`).join('')}</div>
+      </div>
+      <div style="margin-bottom:8px;font-weight:700;color:var(--desert-mid);">דֻּגְמָה: <span style="color:#333;font-weight:500">${wd.example}</span></div>
+      <div style="font-weight:700;color:var(--desert-mid);margin-bottom:6px;">✍️ כִּתְבוּ מִשְׁפָּט מִשֶּׁלָּכֶם עִם הַמִּלָּה "${wd.word}":</div>
+      <textarea class="my-sentence" rows="2" placeholder="כִּתְבוּ כָּאן..."></textarea>
+      <button class="btn btn-primary btn-small" style="margin-top:8px;" onclick="saveSentence(this)">💾 שִׁמְרוּ מִשְׁפָּט</button>`;
+    container.appendChild(card);
+  });
+}
+function saveSentence(btn){
+  const ta=btn.previousElementSibling;
+  if(ta.value.trim().split(/\s+/).length>=3){
+    addScore(15); state.completed.stage3=true;
+    btn.textContent='✅ נִשְׁמַר!'; btn.style.background='var(--correct)'; btn.disabled=true;
+  } else alert('כִּתְבוּ מִשְׁפָּט שָׁלֵם עִם הַמִּלָּה!');
+}
+
+// ═══════════ ACHIEVEMENTS ═══════════
+function checkAllDone(){ if(Object.values(state.completed).every(Boolean)) state.achievements.all=true; }
+function updateAchievements(){
+  checkAllDone();
+  const list=[
+    {key:'memory',icon:'🥇',text:'חוֹקֵר מִלִּים – הִשְׁלַמְתֶּם מִשְׂחַק זִכָּרוֹן'},
+    {key:'bingo',icon:'🎯',text:'אַלּוּף הַבִּינְגוֹ – הִגַּעְתֶּם לְשׁוּרָה מְלֵאָה'},
+    {key:'speed',icon:'⚡',text:'קוֹרְאִים מְהִירִים – שִׁיפַּרְתֶּם אֶת הַזְּמַן'},
+    {key:'questions',icon:'🧠',text:'מְבִינִים הַסִּיפּוּר – עֲנִיתֶם עַל כָּל הַשְּׁאֵלוֹת'},
+    {key:'all',icon:'🏆',text:'אַלּוּפֵי הַקְּרִיאָה – הִשְׁלַמְתֶּם אֶת כָּל הַשְּׁלָבִים'},
+  ];
+  const container=document.getElementById('achievementsList'); if(!container) return;
+  container.innerHTML='';
+  list.forEach(a=>{
+    const div=document.createElement('div');
+    div.className='achievement'+(state.achievements[a.key]?' unlocked':'');
+    div.innerHTML=`<div class="achievement-icon">${a.icon}</div><div class="achievement-text">${a.text}</div>`;
+    container.appendChild(div);
+  });
+  document.getElementById('finalScore').textContent=state.score;
+}
+
+updateScoreDisplay();
+updateAchievements();
+</script>
+</body>
+</html>
